@@ -1,0 +1,229 @@
+{
+  "info": {
+    "name": "SplitPay API",
+    "description": "SplitPay - Smart Split-Bill & UPI Settlement Platform. Set {{baseUrl}} to http://localhost:8080 and {{token}} after login/register.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "token", "value": "" },
+    { "key": "groupId", "value": "" },
+    { "key": "expenseId", "value": "" },
+    { "key": "settlementId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jithendra Kumar\",\n  \"email\": \"jithendra@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"jithendra@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "auth": { "type": "noauth" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        { "name": "Get my profile", "request": { "method": "GET", "url": "{{baseUrl}}/api/users/me" } },
+        {
+          "name": "Update my profile",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/users/me",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Jithendra Kumar Updated\"\n}" }
+          }
+        },
+        {
+          "name": "Change password",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/users/change-password",
+            "body": { "mode": "raw", "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newPassword456\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Groups",
+      "item": [
+        {
+          "name": "Create group",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/groups",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Goa Trip\",\n  \"description\": \"Friends trip to Goa\",\n  \"memberIds\": []\n}" }
+          }
+        },
+        { "name": "Get my groups", "request": { "method": "GET", "url": "{{baseUrl}}/api/groups" } },
+        { "name": "Get group by id", "request": { "method": "GET", "url": "{{baseUrl}}/api/groups/{{groupId}}" } },
+        {
+          "name": "Update group",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/groups/{{groupId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Goa Trip 2026\",\n  \"description\": \"Updated description\"\n}" }
+          }
+        },
+        { "name": "Delete group", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/groups/{{groupId}}" } },
+        {
+          "name": "Add member",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/groups/{{groupId}}/members",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"friend@example.com\"\n}" }
+          }
+        },
+        {
+          "name": "Remove member",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/groups/{{groupId}}/members/REPLACE_USER_ID" }
+        }
+      ]
+    },
+    {
+      "name": "Expenses",
+      "item": [
+        {
+          "name": "Add expense - EQUAL split",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/groups/{{groupId}}/expenses",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Hotel\",\n  \"amount\": 3000,\n  \"category\": \"TRAVEL\",\n  \"paidBy\": \"REPLACE_USER_ID\",\n  \"splitType\": \"EQUAL\",\n  \"participants\": [\n    { \"userId\": \"REPLACE_USER_ID_1\" },\n    { \"userId\": \"REPLACE_USER_ID_2\" },\n    { \"userId\": \"REPLACE_USER_ID_3\" }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Add expense - EXACT split",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/groups/{{groupId}}/expenses",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Dinner\",\n  \"amount\": 3000,\n  \"category\": \"FOOD\",\n  \"paidBy\": \"REPLACE_USER_ID\",\n  \"splitType\": \"EXACT\",\n  \"participants\": [\n    { \"userId\": \"REPLACE_USER_ID_1\", \"amount\": 1500 },\n    { \"userId\": \"REPLACE_USER_ID_2\", \"amount\": 1000 },\n    { \"userId\": \"REPLACE_USER_ID_3\", \"amount\": 500 }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Add expense - PERCENTAGE split",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/groups/{{groupId}}/expenses",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Groceries\",\n  \"amount\": 2000,\n  \"category\": \"SHOPPING\",\n  \"paidBy\": \"REPLACE_USER_ID\",\n  \"splitType\": \"PERCENTAGE\",\n  \"participants\": [\n    { \"userId\": \"REPLACE_USER_ID_1\", \"percentage\": 50 },\n    { \"userId\": \"REPLACE_USER_ID_2\", \"percentage\": 30 },\n    { \"userId\": \"REPLACE_USER_ID_3\", \"percentage\": 20 }\n  ]\n}"
+            }
+          }
+        },
+        { "name": "Get group expenses", "request": { "method": "GET", "url": "{{baseUrl}}/api/groups/{{groupId}}/expenses" } },
+        {
+          "name": "Update expense",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/expenses/{{expenseId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Hotel (updated)\",\n  \"amount\": 3300,\n  \"category\": \"TRAVEL\",\n  \"paidBy\": \"REPLACE_USER_ID\",\n  \"splitType\": \"EQUAL\",\n  \"participants\": [\n    { \"userId\": \"REPLACE_USER_ID_1\" },\n    { \"userId\": \"REPLACE_USER_ID_2\" },\n    { \"userId\": \"REPLACE_USER_ID_3\" }\n  ]\n}"
+            }
+          }
+        },
+        { "name": "Delete expense", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/expenses/{{expenseId}}" } }
+      ]
+    },
+    {
+      "name": "Balances",
+      "item": [
+        { "name": "Get group balances", "request": { "method": "GET", "url": "{{baseUrl}}/api/groups/{{groupId}}/balances" } }
+      ]
+    },
+    {
+      "name": "Minimum Cash Flow",
+      "item": [
+        {
+          "name": "Get minimum cash flow plan",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/groups/{{groupId}}/minimum-cash-flow" }
+        }
+      ]
+    },
+    {
+      "name": "Settlements",
+      "item": [
+        { "name": "Get settlements", "request": { "method": "GET", "url": "{{baseUrl}}/api/groups/{{groupId}}/settlements" } },
+        {
+          "name": "Generate settlement plan",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/groups/{{groupId}}/settlements/generate" }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Create Razorpay order",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/payments/create-order",
+            "body": { "mode": "raw", "raw": "{\n  \"settlementId\": \"{{settlementId}}\"\n}" }
+          }
+        },
+        {
+          "name": "Verify payment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/payments/verify",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razorpayOrderId\": \"order_xxx\",\n  \"razorpayPaymentId\": \"pay_xxx\",\n  \"razorpaySignature\": \"signature_xxx\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        { "name": "Get all users", "request": { "method": "GET", "url": "{{baseUrl}}/api/admin/users" } },
+        { "name": "Get all groups", "request": { "method": "GET", "url": "{{baseUrl}}/api/admin/groups" } },
+        { "name": "Get all transactions", "request": { "method": "GET", "url": "{{baseUrl}}/api/admin/transactions" } },
+        { "name": "Get platform stats", "request": { "method": "GET", "url": "{{baseUrl}}/api/admin/stats" } }
+      ]
+    }
+  ]
+}

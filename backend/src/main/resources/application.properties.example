@@ -1,0 +1,34 @@
+# ==========================================================
+# SplitPay backend configuration template
+# Copy this file to `application.properties` (same folder)
+# and fill in real values. NEVER commit the real file.
+# ==========================================================
+
+server.port=8080
+spring.application.name=splitpay-backend
+
+# ---- MongoDB ----
+# Local example:  mongodb://localhost:27017/splitpay
+# Atlas example:  mongodb+srv://<user>:<password>@<cluster>/splitpay?retryWrites=true&w=majority
+spring.data.mongodb.uri=${MONGODB_URI:mongodb://localhost:27017/splitpay}
+
+# ---- JWT ----
+# Generate a long random secret, e.g.: openssl rand -base64 64
+app.jwt.secret=${JWT_SECRET:CHANGE_ME_TO_A_LONG_RANDOM_SECRET_MIN_32_BYTES}
+app.jwt.expiration-ms=${JWT_EXPIRATION_MS:86400000}
+app.jwt.refresh-expiration-ms=${JWT_REFRESH_EXPIRATION_MS:604800000}
+
+# ---- Razorpay (TEST MODE ONLY in this project) ----
+# Get test keys from https://dashboard.razorpay.com/app/keys (Test Mode toggle)
+razorpay.key-id=${RAZORPAY_KEY_ID:rzp_test_XXXXXXXXXXXX}
+razorpay.key-secret=${RAZORPAY_KEY_SECRET:CHANGE_ME}
+
+# ---- CORS ----
+app.cors.allowed-origins=${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
+# ---- Logging ----
+logging.level.com.splitpay=INFO
+logging.level.org.springframework.security=WARN
+
+# ---- Jackson ----
+spring.jackson.default-property-inclusion=non_null
