@@ -64,10 +64,11 @@ public class SecurityConfig {
                 .filter(s -> !s.isEmpty())
                 .toList();
 
-        if (origins.contains("*")) {
+        if (origins.contains("*") || allowedOrigins.trim().isEmpty()) {
             configuration.setAllowedOriginPatterns(List.of("*"));
         } else {
             configuration.setAllowedOrigins(origins);
+            configuration.setAllowedOriginPatterns(List.of("https://*.vercel.app", "http://localhost:*", "http://127.0.0.1:*"));
         }
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
