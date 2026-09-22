@@ -5,6 +5,7 @@ COPY pom.xml .
 # Download dependencies first (Docker cache layer)
 RUN mvn dependency:go-offline -B
 COPY src ./src
+RUN cp -n src/main/resources/application.properties.example src/main/resources/application.properties || true
 RUN mvn clean package -DskipTests -B
 
 # ---- Stage 2: Run ----

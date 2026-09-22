@@ -4,7 +4,7 @@
 # and fill in real values. NEVER commit the real file.
 # ==========================================================
 
-server.port=8080
+server.port=${PORT:8080}
 spring.application.name=splitpay-backend
 
 # ---- MongoDB ----
@@ -25,6 +25,23 @@ razorpay.key-secret=${RAZORPAY_KEY_SECRET:CHANGE_ME}
 
 # ---- CORS ----
 app.cors.allowed-origins=${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
+# ---- Forgot Password / OTP ----
+app.reset-password.otp-expiry-minutes=${OTP_EXPIRY_MINUTES:10}
+
+# ---- Gmail SMTP (for sending OTP emails) ----
+# IMPORTANT: Use an App Password (NOT your real Gmail password).
+# How to get App Password:
+#   1. Enable 2-Step Verification on your Google account
+#   2. Go to myaccount.google.com → Security → App Passwords
+#   3. Generate a password for "Mail" → paste the 16-char key below
+spring.mail.host=${SPRING_MAIL_HOST:smtp.gmail.com}
+spring.mail.port=${SPRING_MAIL_PORT:587}
+spring.mail.username=${SPRING_MAIL_USERNAME:your-email@gmail.com}
+spring.mail.password=${SPRING_MAIL_PASSWORD:your-app-password}
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.starttls.required=true
 
 # ---- Logging ----
 logging.level.com.splitpay=INFO
