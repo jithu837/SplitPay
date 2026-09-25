@@ -4,7 +4,7 @@ A full-stack expense-splitting app (Java/Spring Boot + MongoDB + React) inspired
 by apps like Splitwise, with an original architecture and UI. It tracks group
 expenses, computes who-owes-whom, collapses debts into a minimal settlement
 plan using a greedy min-cash-flow algorithm, and lets people settle up over
-UPI via **Razorpay Test Mode**.
+UPI via **Razorpay Mode**.
 
 > **Honesty note (read this first):** Every feature described below is
 > actually implemented in this repo — nothing here is aspirational. The one

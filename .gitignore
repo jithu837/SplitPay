@@ -25,6 +25,7 @@ yarn-error.log*
 *.iml
 .vscode/
 .classpath
+.factorypath
 .project
 .settings/
 
