@@ -42,6 +42,9 @@ spring.mail.password=${SPRING_MAIL_PASSWORD:your-app-password}
 spring.mail.properties.mail.smtp.auth=true
 spring.mail.properties.mail.smtp.starttls.enable=true
 spring.mail.properties.mail.smtp.starttls.required=true
+spring.mail.properties.mail.smtp.connectiontimeout=8000
+spring.mail.properties.mail.smtp.timeout=8000
+spring.mail.properties.mail.smtp.writetimeout=8000
 
 # ---- Logging ----
 logging.level.com.splitpay=INFO
