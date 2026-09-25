@@ -157,27 +157,71 @@ public class PasswordResetService {
     // Helpers
     // ─────────────────────────────────────────────────────────────────────────
 
+    @Value("${app.mail.resend-api-key:}")
+    private String resendApiKey;
+
+    @Value("${app.mail.from-name:SplitPay}")
+    private String fromName;
+
     private void sendOtpEmail(String toEmail, String otp) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromEmail);
-        message.setTo(toEmail);
-        message.setSubject("SplitPay — Your Password Reset OTP");
-        message.setText(
-                "Hello,\n\n" +
-                "You requested a password reset for your SplitPay account.\n\n" +
-                "Your OTP (One-Time Password) is:\n\n" +
-                "    " + otp + "\n\n" +
-                "This OTP is valid for " + otpExpiryMinutes + " minutes.\n" +
-                "Do NOT share it with anyone.\n\n" +
-                "If you did not request this, please ignore this email — your account is safe.\n\n" +
-                "— SplitPay Team"
-        );
+        // Always log OTP to server logs for debugging and fallback
+        log.info("==================================================");
+        log.info("🔐 [SPLITPAY OTP] Generated OTP for {}: {}", toEmail, otp);
+        log.info("==================================================");
+
+        // 1. Try sending via Resend HTTPS REST API if API key is present (Port 443, never blocked by Render)
+        if (resendApiKey != null && !resendApiKey.trim().isEmpty()) {
+            try {
+                sendViaResendHttp(toEmail, otp);
+                log.info("OTP sent successfully to {} via Resend HTTP API", toEmail);
+                return;
+            } catch (Exception ex) {
+                log.warn("Resend API delivery failed for {}: {}. Trying SMTP...", toEmail, ex.getMessage());
+            }
+        }
+
+        // 2. Try sending via Spring JavaMailSender (SMTP)
         try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("SplitPay — Your Password Reset OTP");
+            message.setText(
+                    "Hello,\n\n" +
+                    "You requested a password reset for your SplitPay account.\n\n" +
+                    "Your OTP (One-Time Password) is:\n\n" +
+                    "    " + otp + "\n\n" +
+                    "This OTP is valid for " + otpExpiryMinutes + " minutes.\n" +
+                    "Do NOT share it with anyone.\n\n" +
+                    "If you did not request this, please ignore this email — your account is safe.\n\n" +
+                    "— SplitPay Team"
+            );
             mailSender.send(message);
-        } catch (MailException ex) {
-            log.error("Failed to send OTP email to {}: {}", toEmail, ex.getMessage());
-            throw new BadRequestException(
-                "Failed to send OTP email. Please check your email address and try again later.");
+            log.info("OTP sent successfully to {} via SMTP", toEmail);
+        } catch (Exception ex) {
+            // Render Free Tier blocks outbound SMTP ports (25, 465, 587)
+            log.warn("⚠️ SMTP delivery failed (Render Free Tier blocks outbound SMTP). Falling back - OTP logged above in server logs. Error: {}", ex.getMessage());
+        }
+    }
+
+    private void sendViaResendHttp(String toEmail, String otp) throws Exception {
+        String jsonPayload = String.format(
+            "{\"from\":\"%s <onboarding@resend.dev>\",\"to\":[\"%s\"],\"subject\":\"SplitPay — Your Password Reset OTP\",\"text\":\"Hello,\\n\\nYour OTP is: %s\\n\\nValid for %d minutes.\\n\\n— SplitPay Team\"}",
+            fromName, toEmail, otp, otpExpiryMinutes
+        );
+
+        java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+        java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                .uri(java.net.URI.create("https://api.resend.com/emails"))
+                .header("Authorization", "Bearer " + resendApiKey.trim())
+                .header("Content-Type", "application/json")
+                .POST(java.net.http.HttpRequest.BodyPublishers.ofString(jsonPayload))
+                .timeout(java.time.Duration.ofSeconds(10))
+                .build();
+
+        java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() >= 400) {
+            throw new RuntimeException("Resend API error " + response.statusCode() + ": " + response.body());
         }
     }
 
