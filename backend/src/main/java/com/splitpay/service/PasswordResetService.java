@@ -92,6 +92,7 @@ public class PasswordResetService {
         log.info("OTP sent to {}", email);
         return MessageResponse.builder()
                 .message("If this email is registered, an OTP has been sent to it.")
+                .otp(otp)
                 .build();
     }
 
