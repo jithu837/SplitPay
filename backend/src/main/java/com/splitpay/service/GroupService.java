@@ -76,7 +76,7 @@ public class GroupService {
 
     public GroupDto addMember(String groupId, String requesterId, AddMemberRequest request) {
         Group group = findByIdChecked(groupId, requesterId);
-        User newMember = userService.findByEmail(request.getEmail());
+        User newMember = userService.findByEmailOrPhone(request.getIdentifier());
 
         if (group.getMemberIds().contains(newMember.getId())) {
             throw new BadRequestException("User is already a member of this group");

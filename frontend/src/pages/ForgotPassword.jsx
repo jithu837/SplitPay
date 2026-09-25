@@ -197,31 +197,31 @@ export default function ForgotPassword() {
           ))}
         </div>
 
-        {/* ── STEP 1: Email ── */}
+        {/* ── STEP 1: Email / Mobile ── */}
         {step === 0 && (
           <div className="animate-fadeIn">
             <div className="auth-title">Forgot Password?</div>
             <div className="auth-subtitle">
-              Enter your registered email address and we'll send you a 4-digit OTP.
+              Enter your registered email address or mobile number and we'll send you a 4-digit OTP.
             </div>
 
             <ErrorMessage message={sendError} />
 
             <form onSubmit={handleSendOtp} style={{ marginTop: 20 }}>
               <div className="field">
-                <label className="label">Email address</label>
+                <label className="label">Email or Mobile number</label>
                 <div className="input-wrapper">
-                  <span className="input-icon">@</span>
+                  <span className="input-icon">👤</span>
                   <input
                     id="forgot-email"
                     className="input input-with-icon"
-                    type="email"
+                    type="text"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
+                    placeholder="you@example.com or 10-digit mobile"
                     required
                     autoFocus
-                    autoComplete="email"
+                    autoComplete="username"
                   />
                 </div>
               </div>
@@ -253,7 +253,7 @@ export default function ForgotPassword() {
             <div className="auth-title">Enter OTP</div>
             <div className="auth-subtitle">
               We sent a 4-digit code to <strong style={{ color: 'var(--color-text)' }}>{email}</strong>.
-              Check your inbox (and spam folder).
+              Check your inbox, SMS messages, or spam folder.
             </div>
 
             <ErrorMessage message={verifyError} />

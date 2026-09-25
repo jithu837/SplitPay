@@ -16,6 +16,10 @@ public class RegisterRequest {
     @Email(message = "Email must be valid")
     private String email;
 
+    @NotBlank(message = "Mobile number is required")
+    @jakarta.validation.constraints.Pattern(regexp = "^[0-9]{10}$", message = "Mobile number must be a valid 10-digit number")
+    private String phone;
+
     @NotBlank(message = "Password is required")
     @Size(min = 8, max = 72, message = "Password must be at least 8 characters")
     private String password;

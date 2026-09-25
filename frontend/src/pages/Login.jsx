@@ -44,18 +44,18 @@ export default function Login() {
 
         <form onSubmit={handleSubmit}>
           <div className="field">
-            <label className="label">Email address</label>
+            <label className="label">Email or Mobile number</label>
             <div className="input-wrapper">
-              <span className="input-icon">@</span>
+              <span className="input-icon">👤</span>
               <input
                 className="input input-with-icon"
-                type="email"
+                type="text"
                 name="email"
                 value={form.email}
                 onChange={handleChange}
-                placeholder="you@example.com"
+                placeholder="you@example.com or 10-digit mobile"
                 required
-                autoComplete="off"
+                autoComplete="username"
               />
             </div>
           </div>

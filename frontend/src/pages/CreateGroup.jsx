@@ -135,7 +135,7 @@ export default function CreateGroup() {
         <div className="alert alert-info" style={{ marginTop: 16 }}>
           <span className="alert-icon">💡</span>
           <div style={{ fontSize: 13 }}>
-            After creating the group, you can add members by their registered email address.
+            After creating the group, you can add members by their registered email address or mobile number.
           </div>
         </div>
       </div>

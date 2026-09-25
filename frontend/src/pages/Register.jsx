@@ -6,7 +6,7 @@ import { setCredentials } from '../store/features/authSlice'
 import ErrorMessage from '../components/ErrorMessage'
 
 export default function Register() {
-  const [form, setForm] = useState({ name: '', email: '', password: '' })
+  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const dispatch = useDispatch()
@@ -17,9 +17,14 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    const cleanPhone = form.phone.replace(/\D/g, '')
+    if (cleanPhone.length !== 10) {
+      setError('Mobile number must be a valid 10-digit number')
+      return
+    }
     setLoading(true)
     try {
-      const data = await register(form)
+      const data = await register({ ...form, phone: cleanPhone })
       dispatch(setCredentials({ token: data.token, user: data.user }))
       navigate('/dashboard')
     } catch (err) {
@@ -72,6 +77,24 @@ export default function Register() {
                 placeholder="you@example.com"
                 required
                 autoComplete="email"
+              />
+            </div>
+          </div>
+
+          <div className="field">
+            <label className="label">Mobile number</label>
+            <div className="input-wrapper">
+              <span className="input-icon">📱</span>
+              <input
+                className="input input-with-icon"
+                type="tel"
+                name="phone"
+                value={form.phone}
+                onChange={handleChange}
+                placeholder="10-digit mobile number (e.g. 9876543210)"
+                maxLength={10}
+                required
+                autoComplete="tel"
               />
             </div>
           </div>

@@ -23,6 +23,9 @@ public class PasswordResetOtp {
     @Indexed
     private String email;
 
+    @Indexed
+    private String identifier;
+
     /** 6-digit OTP code */
     private String otp;
 

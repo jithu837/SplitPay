@@ -56,30 +56,61 @@ public class PasswordResetService {
     @Value("${spring.mail.username}")
     private String fromEmail;
 
+    @Value("${app.mail.brevo-api-key:${BREVO_API_KEY:}}")
+    private String brevoApiKey;
+
+    @Value("${app.mail.resend-api-key:${RESEND_API_KEY:}}")
+    private String resendApiKey;
+
+    @Value("${app.mail.from-name:SplitPay}")
+    private String fromName;
+
+    @Value("${app.sms.fast2sms-api-key:${FAST2SMS_API_KEY:}}")
+    private String fast2smsApiKey;
+
     // ─────────────────────────────────────────────────────────────────────────
     // Step 1 — Send OTP
     // ─────────────────────────────────────────────────────────────────────────
 
     public MessageResponse sendOtp(ForgotPasswordRequest request) {
-        String email = request.getEmail().trim().toLowerCase();
+        String input = request.getIdentifier().trim();
+        String cleanPhone = input.replaceAll("[^0-9]", "");
 
-        // Always respond with the same message to avoid email enumeration attacks.
-        // Internally skip if user doesn't exist.
-        if (!userRepository.existsByEmail(email)) {
-            log.info("Forgot-password requested for unknown email (silently ignored): {}", email);
+        User user = null;
+        if (input.contains("@")) {
+            user = userRepository.findByEmail(input.toLowerCase()).orElse(null);
+        } else if (cleanPhone.length() == 10) {
+            user = userRepository.findByPhone(cleanPhone).orElse(null);
+        } else {
+            user = userRepository.findByEmail(input.toLowerCase())
+                    .or(() -> userRepository.findByPhone(cleanPhone))
+                    .orElse(null);
+        }
+
+        // Always respond with success message to avoid user enumeration
+        if (user == null) {
+            log.info("Forgot-password requested for unknown identifier (silently ignored): {}", input);
             return MessageResponse.builder()
-                    .message("If this email is registered, an OTP has been sent to it.")
+                    .message("If this email or mobile number is registered, a verification code has been sent.")
                     .build();
         }
 
-        // Invalidate any previous unused OTPs for this email
-        otpRepository.deleteByEmail(email);
+        String userEmail = user.getEmail();
+        String userPhone = user.getPhone();
 
-        // Generate cryptographically random 4-digit OTP
+        // Invalidate previous OTPs for both email and phone
+        otpRepository.deleteByEmail(userEmail);
+        otpRepository.deleteByIdentifier(userEmail);
+        if (userPhone != null) {
+            otpRepository.deleteByIdentifier(userPhone);
+        }
+
+        // Generate 4-digit OTP
         String otp = String.format("%04d", new SecureRandom().nextInt(10_000));
 
         PasswordResetOtp otpRecord = PasswordResetOtp.builder()
-                .email(email)
+                .email(userEmail)
+                .identifier(input)
                 .otp(otp)
                 .expiresAt(Instant.now().plusSeconds((long) otpExpiryMinutes * 60))
                 .used(false)
@@ -87,11 +118,31 @@ public class PasswordResetService {
 
         otpRepository.save(otpRecord);
 
-        sendOtpEmail(email, otp);
+        // Dispatch OTP via SMS if input is phone or user has phone
+        boolean smsSent = false;
+        if (userPhone != null && !userPhone.isEmpty()) {
+            smsSent = sendOtpSms(userPhone, otp);
+        }
 
-        log.info("OTP sent to {}", email);
+        // Dispatch OTP via Email if input is email or user has email
+        boolean emailSent = false;
+        if (userEmail != null && !userEmail.isEmpty()) {
+            try {
+                sendOtpEmail(userEmail, otp);
+                emailSent = true;
+            } catch (Exception ex) {
+                log.warn("Email dispatch failed: {}", ex.getMessage());
+            }
+        }
+
+        if (!smsSent && !emailSent) {
+            log.error("Could not send OTP via SMS or Email for {}", input);
+            throw new BadRequestException("Failed to deliver OTP. Please check your credentials or try again later.");
+        }
+
+        log.info("OTP successfully dispatched for user: email={}, phone={}", userEmail, userPhone);
         return MessageResponse.builder()
-                .message("If this email is registered, an OTP has been sent to it.")
+                .message("If this email or mobile number is registered, a verification code has been sent.")
                 .build();
     }
 
@@ -100,10 +151,13 @@ public class PasswordResetService {
     // ─────────────────────────────────────────────────────────────────────────
 
     public VerifyOtpResponse verifyOtp(VerifyOtpRequest request) {
-        String email = request.getEmail().trim().toLowerCase();
+        String input = request.getIdentifier().trim();
+        String cleanPhone = input.replaceAll("[^0-9]", "");
 
         PasswordResetOtp otpRecord = otpRepository
-                .findTopByEmailAndUsedFalseOrderByExpiresAtDesc(email)
+                .findTopByIdentifierAndUsedFalseOrderByExpiresAtDesc(input)
+                .or(() -> otpRepository.findTopByEmailAndUsedFalseOrderByExpiresAtDesc(input.toLowerCase()))
+                .or(() -> cleanPhone.length() == 10 ? otpRepository.findTopByIdentifierAndUsedFalseOrderByExpiresAtDesc(cleanPhone) : java.util.Optional.empty())
                 .orElseThrow(() -> new BadRequestException("Invalid or expired OTP. Please request a new one."));
 
         if (otpRecord.isUsed()) {
@@ -114,7 +168,7 @@ public class PasswordResetService {
             throw new BadRequestException("OTP has expired. Please request a new one.");
         }
 
-        if (!otpRecord.getOtp().equals(request.getOtp())) {
+        if (!otpRecord.getOtp().equals(request.getOtp().trim())) {
             throw new BadRequestException("Incorrect OTP. Please try again.");
         }
 
@@ -122,8 +176,8 @@ public class PasswordResetService {
         otpRecord.setUsed(true);
         otpRepository.save(otpRecord);
 
-        // Issue a short-lived (5 min) reset-only JWT
-        String resetToken = buildResetToken(email);
+        // Issue a short-lived (5 min) reset-only JWT with user's email
+        String resetToken = buildResetToken(otpRecord.getEmail());
 
         return VerifyOtpResponse.builder()
                 .resetToken(resetToken)
@@ -146,6 +200,10 @@ public class PasswordResetService {
 
         // Clean up any remaining OTP records for this user
         otpRepository.deleteByEmail(email);
+        otpRepository.deleteByIdentifier(email);
+        if (user.getPhone() != null) {
+            otpRepository.deleteByIdentifier(user.getPhone());
+        }
 
         log.info("Password reset successfully for {}", email);
         return MessageResponse.builder()
@@ -154,17 +212,69 @@ public class PasswordResetService {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Helpers
+    // Helpers — SMS & Email Dispatch
     // ─────────────────────────────────────────────────────────────────────────
 
-    @Value("${app.mail.brevo-api-key:${BREVO_API_KEY:}}")
-    private String brevoApiKey;
+    private boolean sendOtpSms(String phone, String otp) {
+        String cleanPhone = phone.replaceAll("[^0-9]", "");
+        if (cleanPhone.length() == 10) {
+            cleanPhone = "91" + cleanPhone; // India country code
+        }
 
-    @Value("${app.mail.resend-api-key:${RESEND_API_KEY:}}")
-    private String resendApiKey;
+        // 1. Try Brevo Transactional SMS if API key present
+        if (brevoApiKey != null && !brevoApiKey.trim().isEmpty()) {
+            try {
+                String payload = String.format(
+                    "{\"sender\":\"SplitPay\",\"recipient\":\"+%s\",\"content\":\"Your SplitPay verification code is %s. Valid for %d minutes.\"}",
+                    cleanPhone, otp, otpExpiryMinutes
+                );
+                java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+                java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
+                        .uri(java.net.URI.create("https://api.brevo.com/v3/transactionalSMS/sms"))
+                        .header("api-key", brevoApiKey.trim())
+                        .header("Content-Type", "application/json")
+                        .POST(java.net.http.HttpRequest.BodyPublishers.ofString(payload))
+                        .timeout(java.time.Duration.ofSeconds(10))
+                        .build();
+                java.net.http.HttpResponse<String> res = client.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
+                if (res.statusCode() < 400) {
+                    log.info("SMS delivered to {} via Brevo SMS", phone);
+                    return true;
+                }
+            } catch (Exception ex) {
+                log.warn("Brevo SMS failed for {}: {}", phone, ex.getMessage());
+            }
+        }
 
-    @Value("${app.mail.from-name:SplitPay}")
-    private String fromName;
+        // 2. Try Fast2SMS API if present
+        if (fast2smsApiKey != null && !fast2smsApiKey.trim().isEmpty()) {
+            try {
+                String mobile = phone.replaceAll("[^0-9]", "");
+                if (mobile.length() > 10) mobile = mobile.substring(mobile.length() - 10);
+                String payload = String.format(
+                    "{\"route\":\"otp\",\"variables_values\":\"%s\",\"numbers\":\"%s\"}",
+                    otp, mobile
+                );
+                java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+                java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
+                        .uri(java.net.URI.create("https://www.fast2sms.com/dev/bulkV2"))
+                        .header("authorization", fast2smsApiKey.trim())
+                        .header("Content-Type", "application/json")
+                        .POST(java.net.http.HttpRequest.BodyPublishers.ofString(payload))
+                        .timeout(java.time.Duration.ofSeconds(10))
+                        .build();
+                java.net.http.HttpResponse<String> res = client.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
+                if (res.statusCode() < 400) {
+                    log.info("SMS delivered to {} via Fast2SMS", phone);
+                    return true;
+                }
+            } catch (Exception ex) {
+                log.warn("Fast2SMS failed for {}: {}", phone, ex.getMessage());
+            }
+        }
+
+        return false;
+    }
 
     private void sendOtpEmail(String toEmail, String otp) {
         boolean sent = false;

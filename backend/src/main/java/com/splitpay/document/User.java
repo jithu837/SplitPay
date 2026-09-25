@@ -27,6 +27,9 @@ public class User {
     @Indexed(unique = true)
     private String email;
 
+    @Indexed(unique = true, sparse = true)
+    private String phone;
+
     /** BCrypt hash only. Plain-text passwords are never stored. */
     private String password;
 

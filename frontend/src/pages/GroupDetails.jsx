@@ -192,19 +192,19 @@ export default function GroupDetails() {
       {/* Add Member Modal */}
       <Modal open={showAddMember} onClose={() => { setShowAddMember(false); setError('') }} title="Add Member">
         <p className="text-muted" style={{ fontSize: 13.5, marginBottom: 20 }}>
-          Enter the registered email address of the person you want to add to <strong>{group.name}</strong>.
+          Enter the registered <strong>email address</strong> or <strong>10-digit mobile number</strong> of the person you want to add to <strong>{group.name}</strong>.
         </p>
         <form onSubmit={handleAddMember}>
           <div className="field">
-            <label className="label">Email address</label>
+            <label className="label">Email or Mobile number</label>
             <div className="input-wrapper">
-              <span className="input-icon">@</span>
+              <span className="input-icon">👤</span>
               <input
                 className="input input-with-icon"
-                type="email"
+                type="text"
                 value={memberEmail}
                 onChange={(e) => setMemberEmail(e.target.value)}
-                placeholder="friend@example.com"
+                placeholder="friend@example.com or 9876543210"
                 required
                 autoFocus
               />

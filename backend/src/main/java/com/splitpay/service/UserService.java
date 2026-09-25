@@ -49,11 +49,34 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("No user registered with email: " + email));
     }
 
+    public User findByPhone(String phone) {
+        String cleanPhone = phone.replaceAll("[^0-9]", "");
+        return userRepository.findByPhone(cleanPhone)
+                .orElseThrow(() -> new ResourceNotFoundException("No user registered with mobile number: " + phone));
+    }
+
+    public User findByEmailOrPhone(String emailOrPhone) {
+        String input = emailOrPhone.trim();
+        if (input.contains("@")) {
+            return findByEmail(input);
+        }
+        String cleanPhone = input.replaceAll("[^0-9]", "");
+        if (cleanPhone.length() == 10) {
+            return userRepository.findByPhone(cleanPhone)
+                    .orElseThrow(() -> new ResourceNotFoundException("No user registered with mobile number: " + cleanPhone));
+        }
+        // Try email first, then phone
+        return userRepository.findByEmail(input.toLowerCase())
+                .or(() -> userRepository.findByPhone(cleanPhone))
+                .orElseThrow(() -> new ResourceNotFoundException("No user registered with: " + input));
+    }
+
     public UserDto toDto(User user) {
         return UserDto.builder()
                 .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
+                .phone(user.getPhone())
                 .role(user.getRole())
                 .createdAt(user.getCreatedAt())
                 .build();

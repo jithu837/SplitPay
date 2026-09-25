@@ -24,14 +24,20 @@ public class AuthService {
 
     public AuthResponse register(RegisterRequest request) {
         String email = request.getEmail().trim().toLowerCase();
+        String phone = request.getPhone() != null ? request.getPhone().replaceAll("[^0-9]", "") : null;
 
         if (userRepository.existsByEmail(email)) {
             throw new ConflictException("An account with this email already exists");
         }
 
+        if (phone != null && !phone.isEmpty() && userRepository.existsByPhone(phone)) {
+            throw new ConflictException("An account with this mobile number already exists");
+        }
+
         User user = User.builder()
                 .name(request.getName().trim())
                 .email(email)
+                .phone(phone)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.USER)
                 .build();
@@ -47,13 +53,24 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        String email = request.getEmail().trim().toLowerCase();
+        String input = request.getEmail().trim();
+        String cleanPhone = input.replaceAll("[^0-9]", "");
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
+        User user;
+        if (input.contains("@")) {
+            user = userRepository.findByEmail(input.toLowerCase())
+                    .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
+        } else if (cleanPhone.length() == 10) {
+            user = userRepository.findByPhone(cleanPhone)
+                    .orElseThrow(() -> new UnauthorizedException("Invalid mobile number or password"));
+        } else {
+            user = userRepository.findByEmail(input.toLowerCase())
+                    .or(() -> userRepository.findByPhone(cleanPhone))
+                    .orElseThrow(() -> new UnauthorizedException("Invalid credentials"));
+        }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new UnauthorizedException("Invalid email or password");
+            throw new UnauthorizedException("Invalid credentials");
         }
 
         String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole());
@@ -70,6 +87,7 @@ public class AuthService {
                 .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
+                .phone(user.getPhone())
                 .role(user.getRole())
                 .createdAt(user.getCreatedAt())
                 .build();
