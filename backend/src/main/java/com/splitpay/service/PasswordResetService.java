@@ -92,7 +92,6 @@ public class PasswordResetService {
         log.info("OTP sent to {}", email);
         return MessageResponse.builder()
                 .message("If this email is registered, an OTP has been sent to it.")
-                .otp(otp)
                 .build();
     }
 
@@ -158,50 +157,97 @@ public class PasswordResetService {
     // Helpers
     // ─────────────────────────────────────────────────────────────────────────
 
-    @Value("${app.mail.resend-api-key:}")
+    @Value("${app.mail.brevo-api-key:${BREVO_API_KEY:}}")
+    private String brevoApiKey;
+
+    @Value("${app.mail.resend-api-key:${RESEND_API_KEY:}}")
     private String resendApiKey;
 
     @Value("${app.mail.from-name:SplitPay}")
     private String fromName;
 
     private void sendOtpEmail(String toEmail, String otp) {
-        // Always log OTP to server logs for debugging and fallback
-        log.info("==================================================");
-        log.info("🔐 [SPLITPAY OTP] Generated OTP for {}: {}", toEmail, otp);
-        log.info("==================================================");
+        boolean sent = false;
 
-        // 1. Try sending via Resend HTTPS REST API if API key is present (Port 443, never blocked by Render)
-        if (resendApiKey != null && !resendApiKey.trim().isEmpty()) {
+        // 1. Try sending via Brevo HTTPS REST API (Port 443 — works seamlessly on Render)
+        if (brevoApiKey != null && !brevoApiKey.trim().isEmpty()) {
             try {
-                sendViaResendHttp(toEmail, otp);
-                log.info("OTP sent successfully to {} via Resend HTTP API", toEmail);
-                return;
+                sendViaBrevoHttp(toEmail, otp);
+                log.info("OTP email sent successfully to {} via Brevo HTTP API", toEmail);
+                sent = true;
             } catch (Exception ex) {
-                log.warn("Resend API delivery failed for {}: {}. Trying SMTP...", toEmail, ex.getMessage());
+                log.error("Brevo API delivery failed for {}: {}", toEmail, ex.getMessage());
             }
         }
 
-        // 2. Try sending via Spring JavaMailSender (SMTP)
-        try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(toEmail);
-            message.setSubject("SplitPay — Your Password Reset OTP");
-            message.setText(
-                    "Hello,\n\n" +
-                    "You requested a password reset for your SplitPay account.\n\n" +
-                    "Your OTP (One-Time Password) is:\n\n" +
-                    "    " + otp + "\n\n" +
-                    "This OTP is valid for " + otpExpiryMinutes + " minutes.\n" +
-                    "Do NOT share it with anyone.\n\n" +
-                    "If you did not request this, please ignore this email — your account is safe.\n\n" +
-                    "— SplitPay Team"
+        // 2. Try sending via Resend HTTPS REST API (Port 443)
+        if (!sent && resendApiKey != null && !resendApiKey.trim().isEmpty()) {
+            try {
+                sendViaResendHttp(toEmail, otp);
+                log.info("OTP email sent successfully to {} via Resend HTTP API", toEmail);
+                sent = true;
+            } catch (Exception ex) {
+                log.error("Resend API delivery failed for {}: {}", toEmail, ex.getMessage());
+            }
+        }
+
+        // 3. Try sending via Spring JavaMailSender (SMTP)
+        if (!sent) {
+            try {
+                SimpleMailMessage message = new SimpleMailMessage();
+                message.setFrom(fromEmail);
+                message.setTo(toEmail);
+                message.setSubject("SplitPay — Your Password Reset OTP");
+                message.setText(
+                        "Hello,\n\n" +
+                        "You requested a password reset for your SplitPay account.\n\n" +
+                        "Your OTP (One-Time Password) is:\n\n" +
+                        "    " + otp + "\n\n" +
+                        "This OTP is valid for " + otpExpiryMinutes + " minutes.\n" +
+                        "Do NOT share it with anyone.\n\n" +
+                        "If you did not request this, please ignore this email — your account is safe.\n\n" +
+                        "— SplitPay Team"
+                );
+                mailSender.send(message);
+                log.info("OTP email sent successfully to {} via SMTP", toEmail);
+                sent = true;
+            } catch (Exception ex) {
+                log.error("SMTP delivery failed for {}: {}", toEmail, ex.getMessage());
+            }
+        }
+
+        if (!sent) {
+            throw new BadRequestException(
+                "Failed to send OTP email to " + toEmail + ". Cloud hosting blocks direct SMTP (port 587). Please configure BREVO_API_KEY or RESEND_API_KEY in Render Environment."
             );
-            mailSender.send(message);
-            log.info("OTP sent successfully to {} via SMTP", toEmail);
-        } catch (Exception ex) {
-            // Render Free Tier blocks outbound SMTP ports (25, 465, 587)
-            log.warn("⚠️ SMTP delivery failed (Render Free Tier blocks outbound SMTP). Falling back - OTP logged above in server logs. Error: {}", ex.getMessage());
+        }
+    }
+
+    private void sendViaBrevoHttp(String toEmail, String otp) throws Exception {
+        String senderEmail = (fromEmail != null && fromEmail.contains("@")) ? fromEmail.trim() : "splitpayonline7@gmail.com";
+        String htmlBody = String.format(
+            "<html><body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'><div style='max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;'><h2 style='color: #2563eb;'>SplitPay</h2><p>Hello,</p><p>You requested a password reset for your SplitPay account.</p><p>Your OTP (One-Time Password) is:</p><div style='background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 12px; text-align: center; margin: 20px 0;'><span style='font-size: 26px; font-weight: bold; letter-spacing: 4px; color: #166534;'>%s</span></div><p>This code will expire in <strong>%d minutes</strong>.</p><p style='color: #777; font-size: 13px;'>If you did not request this, please ignore this email.</p></div></body></html>",
+            otp, otpExpiryMinutes
+        );
+
+        String jsonPayload = String.format(
+            "{\"sender\":{\"name\":\"%s\",\"email\":\"%s\"},\"to\":[{\"email\":\"%s\"}],\"subject\":\"SplitPay — Your Password Reset OTP\",\"htmlContent\":\"%s\"}",
+            fromName, senderEmail, toEmail, htmlBody.replace("\"", "\\\"")
+        );
+
+        java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+        java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                .uri(java.net.URI.create("https://api.brevo.com/v3/smtp/email"))
+                .header("api-key", brevoApiKey.trim())
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
+                .POST(java.net.http.HttpRequest.BodyPublishers.ofString(jsonPayload))
+                .timeout(java.time.Duration.ofSeconds(10))
+                .build();
+
+        java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() >= 400) {
+            throw new RuntimeException("Brevo HTTP error " + response.statusCode() + ": " + response.body());
         }
     }
 

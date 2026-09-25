@@ -16,7 +16,6 @@ export default function ForgotPassword() {
   const [sendLoading, setSendLoading] = useState(false)
   const [sendError, setSendError] = useState('')
   const [countdown, setCountdown] = useState(0)
-  const [otpHint, setOtpHint] = useState('')
 
   // ── Step 2 state ───────────────────────────────────────────────────────────
   const [otp, setOtp] = useState(['', '', '', ''])
@@ -47,10 +46,7 @@ export default function ForgotPassword() {
     setSendError('')
     setSendLoading(true)
     try {
-      const res = await forgotPassword({ email: email.trim().toLowerCase() })
-      if (res?.otp) {
-        setOtpHint(res.otp)
-      }
+      await forgotPassword({ email: email.trim().toLowerCase() })
       setStep(1)
       setCountdown(60)
       setTimeout(() => otpRefs.current[0]?.focus(), 100)
@@ -66,10 +62,7 @@ export default function ForgotPassword() {
     setSendError('')
     setSendLoading(true)
     try {
-      const res = await forgotPassword({ email: email.trim().toLowerCase() })
-      if (res?.otp) {
-        setOtpHint(res.otp)
-      }
+      await forgotPassword({ email: email.trim().toLowerCase() })
       setOtp(['', '', '', ''])
       setVerifyError('')
       setCountdown(60)
@@ -265,43 +258,6 @@ export default function ForgotPassword() {
 
             <ErrorMessage message={verifyError} />
             {sendError && <ErrorMessage message={sendError} />}
-
-            {otpHint && (
-              <div style={{
-                background: 'rgba(56, 189, 248, 0.12)',
-                border: '1px solid rgba(56, 189, 248, 0.3)',
-                borderRadius: '8px',
-                padding: '12px 16px',
-                marginTop: 16,
-                fontSize: 14,
-                color: '#38bdf8',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 8
-              }}>
-                <span>🔐 OTP Code: <strong style={{ letterSpacing: 2, fontSize: 17, color: '#fff' }}>{otpHint}</strong></span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOtp(otpHint.split(''))
-                    otpRefs.current[3]?.focus()
-                  }}
-                  style={{
-                    background: 'rgba(56, 189, 248, 0.25)',
-                    border: '1px solid rgba(56, 189, 248, 0.4)',
-                    borderRadius: 6,
-                    color: '#fff',
-                    padding: '4px 10px',
-                    cursor: 'pointer',
-                    fontSize: 12,
-                    fontWeight: 600
-                  }}
-                >
-                  Auto-fill ⚡
-                </button>
-              </div>
-            )}
 
             <form onSubmit={handleVerifyOtp} style={{ marginTop: 24 }}>
               {/* 6-box OTP input */}

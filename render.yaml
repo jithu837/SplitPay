@@ -41,3 +41,6 @@ services:
         value: "10"
       - key: RESEND_API_KEY
         sync: false
+      - key: BREVO_API_KEY
+        sync: false
+
