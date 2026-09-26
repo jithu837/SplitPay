@@ -6,6 +6,7 @@ import { setCredentials } from '../store/features/authSlice'
 import ErrorMessage from '../components/ErrorMessage'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+const APPLE_CLIENT_ID = import.meta.env.VITE_APPLE_CLIENT_ID || ''
 
 export default function Register() {
   const [mode, setMode] = useState(null) // null | 'email'
@@ -52,6 +53,11 @@ export default function Register() {
 
   // ── Google Sign-In ──
   const handleGoogle = useCallback(() => {
+    if (!GOOGLE_CLIENT_ID) {
+      setError('Google Sign-In is not configured yet. Switched to email sign up.')
+      setMode('email')
+      return
+    }
     if (!window.google?.accounts?.id) {
       setError('Google Sign-In is loading. Please try again in a moment.')
       return
@@ -76,6 +82,11 @@ export default function Register() {
 
   // ── Apple Sign-In ──
   const handleApple = useCallback(async () => {
+    if (!APPLE_CLIENT_ID) {
+      setError('Apple Sign-In is not configured yet. Switched to email sign up.')
+      setMode('email')
+      return
+    }
     if (!window.AppleID) {
       setError('Apple Sign-In is loading. Please try again in a moment.')
       return
@@ -83,7 +94,7 @@ export default function Register() {
     setError('')
     try {
       window.AppleID.auth.init({
-        clientId: import.meta.env.VITE_APPLE_CLIENT_ID || 'com.splitpay.web',
+        clientId: APPLE_CLIENT_ID,
         scope: 'name email',
         redirectURI: window.location.origin + '/register',
         usePopup: true,
