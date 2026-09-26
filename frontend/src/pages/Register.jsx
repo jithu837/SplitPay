@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useDispatch } from 'react-redux'
 import { useNavigate, Link } from 'react-router-dom'
 import { register } from '../services/authService'
@@ -9,8 +9,16 @@ export default function Register() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [slowWarning, setSlowWarning] = useState(false)
   const dispatch = useDispatch()
   const navigate = useNavigate()
+
+  // Show a friendly message after 5 s in case Render is cold-starting
+  useEffect(() => {
+    if (!loading) { setSlowWarning(false); return }
+    const t = setTimeout(() => setSlowWarning(true), 5000)
+    return () => clearTimeout(t)
+  }, [loading])
 
   const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
 
@@ -46,6 +54,15 @@ export default function Register() {
         <div className="auth-subtitle">Start splitting expenses with your friends</div>
 
         <ErrorMessage message={error} />
+        {slowWarning && (
+          <div style={{
+            background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
+            borderRadius: 8, padding: '10px 14px', marginBottom: 12,
+            fontSize: 12.5, color: 'var(--color-warning)', lineHeight: 1.5,
+          }}>
+            ⏳ Our server is waking up from sleep — this usually takes up to 30 seconds on first use. Please wait…
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className="field">

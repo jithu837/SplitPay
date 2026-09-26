@@ -1,7 +1,9 @@
+import { useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import PublicLayout from './layouts/PublicLayout'
 import AppLayout from './layouts/AppLayout'
 import ProtectedRoute from './routes/ProtectedRoute'
+import { pingBackend } from './services/api'
 
 import Landing from './pages/Landing'
 import Register from './pages/Register'
@@ -22,6 +24,9 @@ import Profile from './pages/Profile'
 import AdminDashboard from './pages/AdminDashboard'
 
 export default function App() {
+  // Silently wake up the Render server when the app loads (avoids cold-start
+  // delay hitting the user mid-form-submit on login / register).
+  useEffect(() => { pingBackend() }, [])
   return (
     <Routes>
       {/* Public */}
