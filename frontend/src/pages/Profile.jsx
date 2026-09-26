@@ -9,6 +9,7 @@ export default function Profile() {
   const dispatch = useDispatch()
 
   const [name, setName] = useState(user.name)
+  const [phone, setPhone] = useState(user.phone || '')
   const [profileMsg, setProfileMsg] = useState('')
   const [profileError, setProfileError] = useState('')
 
@@ -20,13 +21,23 @@ export default function Profile() {
 
   const initials = user.name?.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
 
+  const phoneChanged = phone.replace(/\D/g, '') !== (user.phone || '')
+  const nameChanged = name.trim() !== user.name
+  const profileDirty = nameChanged || phoneChanged
+
   const handleProfileSubmit = async (e) => {
     e.preventDefault()
     setProfileError('')
     setProfileMsg('')
+    const cleanPhone = phone.replace(/\D/g, '')
+    if (cleanPhone && cleanPhone.length !== 10) {
+      setProfileError('Mobile number must be a valid 10-digit number')
+      return
+    }
     try {
-      const updated = await updateMe({ name })
+      const updated = await updateMe({ name, phone: cleanPhone })
       dispatch(updateUser(updated))
+      setPhone(updated.phone || '')
       setProfileMsg('Profile updated successfully!')
     } catch (err) {
       setProfileError(err.response?.data?.message || 'Could not update profile')
@@ -68,6 +79,9 @@ export default function Profile() {
           <div>
             <div style={{ fontSize: 20, fontWeight: 700 }}>{user.name}</div>
             <div className="text-muted" style={{ fontSize: 13.5, marginTop: 4 }}>{user.email}</div>
+            {user.phone && (
+              <div className="text-muted" style={{ fontSize: 13, marginTop: 2 }}>📱 {user.phone}</div>
+            )}
             <div style={{ marginTop: 8 }}>
               {user.role === 'ADMIN' ? (
                 <span className="admin-badge">⭐ Admin</span>
@@ -82,7 +96,7 @@ export default function Profile() {
         <div className="card" style={{ marginBottom: 20 }}>
           <div style={{ marginBottom: 20 }}>
             <h3>Basic Information</h3>
-            <p className="text-muted" style={{ fontSize: 13, marginTop: 4 }}>Update your display name</p>
+            <p className="text-muted" style={{ fontSize: 13, marginTop: 4 }}>Update your display name and mobile number</p>
           </div>
 
           {profileMsg && (
@@ -119,10 +133,28 @@ export default function Profile() {
                 Email cannot be changed
               </div>
             </div>
+            <div className="field">
+              <label className="label">Mobile number</label>
+              <div className="input-wrapper">
+                <span className="input-icon">📱</span>
+                <input
+                  className="input input-with-icon"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  placeholder="10-digit mobile number"
+                  maxLength={10}
+                  autoComplete="tel"
+                />
+              </div>
+              <div style={{ fontSize: 11.5, color: 'var(--color-text-muted)', marginTop: 5 }}>
+                Used to identify you in groups and for password recovery via SMS
+              </div>
+            </div>
             <button
               className="btn btn-primary"
               type="submit"
-              disabled={name === user.name || !name.trim()}
+              disabled={!profileDirty || !name.trim()}
             >
               Save changes
             </button>

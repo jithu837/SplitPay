@@ -5,6 +5,7 @@ import com.splitpay.dto.request.ChangePasswordRequest;
 import com.splitpay.dto.request.UpdateProfileRequest;
 import com.splitpay.dto.response.UserDto;
 import com.splitpay.exception.BadRequestException;
+import com.splitpay.exception.ConflictException;
 import com.splitpay.exception.ResourceNotFoundException;
 import com.splitpay.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,21 @@ public class UserService {
     public UserDto updateProfile(String userId, UpdateProfileRequest request) {
         User user = findById(userId);
         user.setName(request.getName().trim());
+
+        // Handle optional phone update
+        String newPhone = request.getPhone();
+        if (newPhone != null && !newPhone.isBlank()) {
+            newPhone = newPhone.replaceAll("[^0-9]", "");
+            // Check if this phone belongs to a *different* user
+            userRepository.findByPhone(newPhone).ifPresent(existing -> {
+                if (!existing.getId().equals(userId)) {
+                    throw new ConflictException("An account with this mobile number already exists");
+                }
+            });
+            user.setPhone(newPhone);
+        }
+        // If phone is blank/null we leave the existing phone untouched
+
         return toDto(userRepository.save(user));
     }
 
