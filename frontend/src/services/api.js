@@ -33,5 +33,5 @@ export default api
 
 /** Fire-and-forget ping to wake up the Render free-tier server on cold start. */
 export function pingBackend() {
-  api.get('/actuator/health').catch(() => {/* ignore — best effort */})
+  api.get('/auth/ping').catch(() => {/* ignore — best effort */})
 }

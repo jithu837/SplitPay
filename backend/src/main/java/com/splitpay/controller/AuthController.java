@@ -73,5 +73,11 @@ public class AuthController {
             @Valid @RequestBody ResetPasswordRequest request) {
         return ResponseEntity.ok(passwordResetService.resetPassword(request));
     }
+
+    /** Silent health check / ping to wake up cloud instances */
+    @GetMapping("/ping")
+    public ResponseEntity<java.util.Map<String, String>> ping() {
+        return ResponseEntity.ok(java.util.Map.of("status", "UP"));
+    }
 }
 

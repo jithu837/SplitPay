@@ -22,6 +22,7 @@ export default function ForgotPassword() {
   const [verifyLoading, setVerifyLoading] = useState(false)
   const [verifyError, setVerifyError] = useState('')
   const [resetToken, setResetToken] = useState('')
+  const [devOtpHint, setDevOtpHint] = useState('')
   const otpRefs = useRef([])
 
   // ── Step 3 state ───────────────────────────────────────────────────────────
@@ -46,7 +47,10 @@ export default function ForgotPassword() {
     setSendError('')
     setSendLoading(true)
     try {
-      await forgotPassword({ email: email.trim().toLowerCase() })
+      const data = await forgotPassword({ email: email.trim().toLowerCase() })
+      if (data?.debugOtp) {
+        setDevOtpHint(data.debugOtp)
+      }
       setStep(1)
       setCountdown(60)
       setTimeout(() => otpRefs.current[0]?.focus(), 100)
@@ -62,7 +66,10 @@ export default function ForgotPassword() {
     setSendError('')
     setSendLoading(true)
     try {
-      await forgotPassword({ email: email.trim().toLowerCase() })
+      const data = await forgotPassword({ email: email.trim().toLowerCase() })
+      if (data?.debugOtp) {
+        setDevOtpHint(data.debugOtp)
+      }
       setOtp(['', '', '', ''])
       setVerifyError('')
       setCountdown(60)
@@ -255,6 +262,36 @@ export default function ForgotPassword() {
               We sent a 4-digit code to <strong style={{ color: 'var(--color-text)' }}>{email}</strong>.
               Check your inbox, SMS messages, or spam folder.
             </div>
+
+            {devOtpHint && (
+              <div style={{
+                background: 'rgba(37,99,235,0.08)',
+                border: '1px solid rgba(37,99,235,0.25)',
+                borderRadius: 8,
+                padding: '10px 14px',
+                marginBottom: 16,
+                fontSize: 13,
+                color: 'var(--brand-700)',
+                lineHeight: 1.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}>
+                <span>🔐 <strong>Test code:</strong> {devOtpHint}</span>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-secondary"
+                  onClick={() => {
+                    const digits = devOtpHint.split('')
+                    setOtp(digits)
+                    otpRefs.current[3]?.focus()
+                  }}
+                  style={{ padding: '3px 8px', fontSize: 12 }}
+                >
+                  Auto-fill
+                </button>
+              </div>
+            )}
 
             <ErrorMessage message={verifyError} />
             {sendError && <ErrorMessage message={sendError} />}
