@@ -2,6 +2,7 @@ package com.splitpay.controller;
 
 import com.splitpay.dto.request.ForgotPasswordRequest;
 import com.splitpay.dto.request.LoginRequest;
+import com.splitpay.dto.request.OAuthRequest;
 import com.splitpay.dto.request.RegisterRequest;
 import com.splitpay.dto.request.ResetPasswordRequest;
 import com.splitpay.dto.request.VerifyOtpRequest;
@@ -9,6 +10,7 @@ import com.splitpay.dto.response.AuthResponse;
 import com.splitpay.dto.response.MessageResponse;
 import com.splitpay.dto.response.VerifyOtpResponse;
 import com.splitpay.service.AuthService;
+import com.splitpay.service.OAuthService;
 import com.splitpay.service.PasswordResetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final OAuthService oAuthService;
     private final PasswordResetService passwordResetService;
 
     // ── Existing endpoints ──────────────────────────────────────────────────
@@ -34,6 +37,18 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    // ── OAuth (Google / Apple) ──────────────────────────────────────────────
+
+    @PostMapping("/oauth/google")
+    public ResponseEntity<AuthResponse> googleLogin(@Valid @RequestBody OAuthRequest request) {
+        return ResponseEntity.ok(oAuthService.googleLogin(request));
+    }
+
+    @PostMapping("/oauth/apple")
+    public ResponseEntity<AuthResponse> appleLogin(@Valid @RequestBody OAuthRequest request) {
+        return ResponseEntity.ok(oAuthService.appleLogin(request));
     }
 
     // ── Forgot Password / OTP flow (no auth required) ──────────────────────
@@ -59,3 +74,4 @@ public class AuthController {
         return ResponseEntity.ok(passwordResetService.resetPassword(request));
     }
 }
+
